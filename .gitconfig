@@ -1,0 +1,26 @@
+[user]
+	email = adonyssantoscemas@gmail.com
+	name = Adonys
+[core]
+	editor = code --wait
+[github]
+	user = adonyssantoscemas
+[init]
+	defaultBranch = main
+[alias]
+	cg = config --global
+	cl = config --list
+	c = clone
+	ra = remote add origin
+	a = add .
+	st = status
+	ci = commit -am
+	ps = push
+	pl = pull
+	unstage = reset HEAD --
+	lg = log --oneline --graph --decorate
+	lg1 = log -1 HEAD
+	lg3 = log -3
+	co = checkout
+	br = branch
+	t = tag
