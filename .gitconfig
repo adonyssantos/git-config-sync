@@ -16,6 +16,7 @@
 	st = status
 	ci = commit -am
 	ps = push
+	pu = push --set-upstream origin
 	pl = pull
 	unstage = reset HEAD --
 	lg = log --oneline --graph --decorate
