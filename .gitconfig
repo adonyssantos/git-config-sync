@@ -19,11 +19,16 @@
 	pu = push --set-upstream origin
 	pl = pull
 	unstage = reset HEAD --
-	lg = log --oneline --graph --decorate
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit --date=relative --branches
 	lg1 = log -1 HEAD
 	lg3 = log -3
 	co = checkout
 	br = branch
 	t = tag
 	amend = commit --amend
+	main = branch -M main
+	cob = checkout -b
+	d = diff
+	l = log
+	rf = reflog
 	
