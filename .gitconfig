@@ -31,4 +31,5 @@
 	d = diff
 	l = log
 	rf = reflog
+	pf = ! git pull && git fetch
 	
