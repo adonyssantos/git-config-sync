@@ -1,10 +1,10 @@
 [user]
-	email = adonyssantoscemas@gmail.com
+	email = adonysmundoteh@gmail.com
 	name = Adonys
 [core]
 	editor = code --wait
 [github]
-	user = adonyssantoscemas
+	user = adonyssantos
 [init]
 	defaultBranch = main
 [alias]
@@ -31,4 +31,10 @@
 	d = diff
 	l = log
 	rf = reflog
+	pf = ! git pull && git fetch
 	
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[pull]
+	rebase = false
