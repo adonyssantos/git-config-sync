@@ -27,3 +27,6 @@
 	co = checkout
 	br = branch
 	main = branch -M main
+[credential]
+	helper = cache
+	
