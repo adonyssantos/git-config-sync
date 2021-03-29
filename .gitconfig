@@ -1,29 +1,31 @@
 [user]
-	email = adonysmundoteh@gmail.com
-	name = Adonys
-[core]
-	editor = code --wait
+        email = adonysmundoteh@gmail.com
+        name = adonyssantos
 [github]
 	user = adonyssantos
+[core]
+        editor = code --wait
 [pull]
-	rebase = false
+        rebase = false
 [init]
-	defaultBranch = main
+        defaultBranch = main
 [alias]
-	cg = config --global
-	cl = config --list
-	all = add .
-	st = status
-	unstage = reset HEAD --
-	ci = commit -am
-	amend = commit --amend
-	ps = push
-	psu = ps --set-upstream origin
-	pl = pull
-	pf = ! git pull && git fetch
-	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
-	nm = lg --no-merges
-	df = lg -p
-	co = checkout
-	br = branch
-	main = branch -M main
+        cg = config --global
+        cl = config --list
+        all = add .
+        st = status
+        unstage = reset HEAD --
+        ci = commit -am
+        amend = commit --amend
+        ps = push
+        psu = ps --set-upstream origin
+        pl = pull
+        pf = ! git pull && git fetch
+        lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+        nm = lg --no-merges
+        df = lg -p
+        co = checkout
+        br = branch
+        main = branch -M main
+[credential]
+        helper = cache
