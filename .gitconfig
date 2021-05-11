@@ -1,12 +1,6 @@
 [user]
-	email = adonysmundoteh@gmail.com
-	name = adonyssantos
-[github]
-	user = adonyssantos
-[core]
-        editor = code --wait
-[pull]
-        rebase = false
+	email = adonysmundotech@gmail.com
+	name = Adonys Santos
 [init]
         defaultBranch = main
 [alias]
@@ -21,11 +15,9 @@
         psu = ps --set-upstream origin
         pl = pull
         pf = ! git pull && git fetch
-        lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
         nm = lg --no-merges
         df = lg -p
         co = checkout
         br = branch
         main = branch -M main
-[credential]
-        helper = cache
