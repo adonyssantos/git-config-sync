@@ -1,6 +1,12 @@
 [user]
 	email = adonysmundotech@gmail.com
 	name = Adonys Santos
+[github]
+	user = adonyssantos
+[core]
+        editor = code --wait
+[pull]
+        rebase = false
 [init]
         defaultBranch = main
 [alias]
