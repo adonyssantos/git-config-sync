@@ -1,10 +1,10 @@
 [user]
-	email = adonysmundotech@gmail.com
+	email = adonyssantosjimenez@gmail.com
 	name = Adonys Santos
 [github]
 	user = adonyssantos
 [core]
-        editor = code --wait
+        editor = nano
 [pull]
         rebase = false
 [init]
@@ -15,7 +15,8 @@
         all = add .
         st = status
         unstage = reset HEAD --
-        ci = commit -am
+        ci = commit -m
+	cia = commit -am
         amend = commit --amend
         ps = push
         psu = ps --set-upstream origin
@@ -27,3 +28,4 @@
         co = checkout
         br = branch
         main = branch -M main
+        back = co -- .
