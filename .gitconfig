@@ -29,3 +29,6 @@
         br = branch
         main = branch -M main
         back = co -- .
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
