@@ -22,8 +22,8 @@
         psu = ps --set-upstream origin
         pl = pull
         pf = ! git pull && git fetch
-        ud = ! git fetch && git rebase
-        udm = udt origin/main
+        ud = ! git fetch && git rebase $1
+        udm = ud origin/main
 	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
         nm = lg --no-merges
         df = lg -p
