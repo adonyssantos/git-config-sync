@@ -16,6 +16,7 @@
         st = status
         unstage = reset HEAD --
         ci = commit -m
+        aci = git all && git ci
 	cia = commit -am
         amend = commit --amend
         ps = push
