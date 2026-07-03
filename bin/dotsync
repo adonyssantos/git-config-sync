@@ -60,8 +60,14 @@ resolve_repo_dir() {
         local REPO_DIR=""; source "$STATE_FILE"
         [ -n "$REPO_DIR" ] && { printf '%s\n' "$REPO_DIR"; return 0; }
     fi
-    local self_repo; self_repo="$(dirname "$(script_dir)")"   # bin/ -> repo root
-    if [ -f "$self_repo/sync.map" ]; then
+    # Fall back to the repo this script lives in — but NOT when that repo is the
+    # CLI's own install location (~/.local/share/dotsync). A `curl | bash` install
+    # is "CLI only": its bundled sample config must never be auto-adopted as the
+    # user's config repo just because it happens to ship a sync.map.
+    local self_repo install_dir
+    self_repo="$(dirname "$(script_dir)")"   # bin/ -> repo root
+    install_dir="${XDG_DATA_HOME:-$HOME/.local/share}/dotsync"
+    if [ -f "$self_repo/sync.map" ] && [ "$self_repo" != "$install_dir" ]; then
         printf '%s\n' "$self_repo"; return 0
     fi
     return 1
@@ -276,6 +282,7 @@ _doctor_one() {
     local src="$1" target="$2" rel="$3"
     if [ ! -e "$src" ]; then
         _check fail "$rel: source missing ($src)"
+        problems=$((problems + 1))
     elif [ -L "$target" ] && [ "$(readlink "$target")" = "$src" ]; then
         _check pass "$rel: linked"
     elif [ -e "$target" ] || [ -L "$target" ]; then
