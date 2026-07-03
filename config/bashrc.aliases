@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# git-config-sync — shell aliases
+#
+# This block is appended to your ~/.bashrc by `git-config-sync link` (or
+# install.sh). It is wrapped in BEGIN/END markers so it can be safely
+# re-applied and later removed without touching the rest of your ~/.bashrc.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Navigation ────────────────────────────────────────────────────────────────
+alias ..='cd ..'            # Go up one directory
+alias ...='cd ../..'        # Go up two directories
+alias dev='mkdir -p ~/DEVELOPMENT && cd ~/DEVELOPMENT' # Jump to the development folder (created if missing)
+
+# WSL only: open files/folders in Windows Explorer. Safe to delete on native Linux/macOS.
+if command -v explorer.exe >/dev/null 2>&1; then
+    alias open='explorer.exe'
+fi
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+alias dc='docker compose'   # Shorthand for docker compose
+alias dps='docker ps'       # List running containers
+alias dpa='docker ps -a'    # List all containers, including stopped ones
+
+# ── System ────────────────────────────────────────────────────────────────────
+# `update` — refresh & upgrade all system packages, adapting to the distro's package manager
+if command -v apt >/dev/null 2>&1; then
+    alias update='sudo apt update && sudo apt upgrade -y'          # Debian / Ubuntu
+elif command -v dnf >/dev/null 2>&1; then
+    alias update='sudo dnf upgrade --refresh -y'                   # Fedora / RHEL 8+
+elif command -v yum >/dev/null 2>&1; then
+    alias update='sudo yum update -y'                              # CentOS / RHEL 7
+elif command -v pacman >/dev/null 2>&1; then
+    alias update='sudo pacman -Syu --noconfirm'                    # Arch / Manjaro
+elif command -v zypper >/dev/null 2>&1; then
+    alias update='sudo zypper refresh && sudo zypper update -y'    # openSUSE
+elif command -v apk >/dev/null 2>&1; then
+    alias update='sudo apk update && sudo apk upgrade'             # Alpine
+fi
+alias dropcache='echo 1 | sudo tee /proc/sys/vm/drop_caches'  # Free Linux page/buffer cache
+alias duh='du -h --max-depth=1 | sort -hr'                    # Disk usage sorted by size

@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# git-config-sync — sample global git config
+#
+# This file is symlinked to ~/.gitconfig by `git-config-sync link` (or install.sh).
+# Replace the placeholders in the [user]/[github] sections with your own values,
+# or set them once with:
+#
+#     git config --global user.name  "Your Name"
+#     git config --global user.email "you@example.com"
+# ─────────────────────────────────────────────────────────────────────────────
+
+[user]
+	# CHANGE ME — your commit identity
+	name = Your Name
+	email = you@example.com
+
+[github]
+	# CHANGE ME — your GitHub username
+	user = your-username
+
+[core]
+	editor = nano
+	excludesfile = ~/.gitignore_global
+
+	# Security hardening (OPT-IN, disabled by default).
+	# Setting hooksPath to /dev/null globally disables ALL git hooks, which
+	# blocks malicious hooks a cloned repo might ship — but it also disables
+	# legitimate tooling (husky, pre-commit, lefthook, etc.). Uncomment only
+	# if you understand the trade-off.
+	# hooksPath = /dev/null
+
+[pull]
+	rebase = false
+
+[init]
+	defaultBranch = main
+
+[commit]
+	verbose = true
+
+[alias]
+	# ── Config ────────────────────────────────────────────────────────
+	cg = config --global                 # Edit global git config
+	cl = config --list                   # List all effective config values
+
+	# ── Staging & committing ──────────────────────────────────────────
+	all = add .                          # Stage all changes in the working tree
+	st = status                          # Show working tree status
+	unstage = reset HEAD --              # Unstage files (keeps working tree changes)
+	ci = commit -m                       # Commit with a message: git ci "message"
+	aci = !git add . && git commit -m    # Stage everything, then commit: git aci "message"
+	cia = commit -am                     # Stage tracked files and commit in one step
+	amend = commit --amend               # Amend the last commit
+
+	# ── Pushing & pulling ─────────────────────────────────────────────
+	ps = push                            # Push to remote
+	psu = !git push --set-upstream origin $(git rev-parse --abbrev-ref HEAD)  # Push and set upstream tracking
+	psf = push --force                   # Force push (use with caution)
+	pl = pull                            # Pull from remote
+	pf = !git pull && git fetch          # Pull then fetch all remotes
+	ud = "!f() { git fetch && git rebase $1; }; f"  # Fetch and rebase onto a ref: git ud origin/main
+	udm = ud origin/main                 # Update current branch from origin/main
+
+	# ── Branching ─────────────────────────────────────────────────────
+	co = checkout                        # Switch branches or restore files
+	br = branch                          # List or manage branches
+	main = branch -M main                # Rename current branch to main
+	back = co -- .                       # Discard all uncommitted working tree changes
+
+	# ── Log & diff ────────────────────────────────────────────────────
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit  # Compact colorized commit graph
+	nm = lg --no-merges                  # Graph log without merge commits
+	df = lg -p                           # Graph log with inline diffs

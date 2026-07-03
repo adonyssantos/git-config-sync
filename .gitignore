@@ -1,0 +1,3 @@
+# This repo ships a bin/ directory; the global gitignore excludes [Bb]in/.
+# Re-include it here so the CLI is tracked.
+!/bin/

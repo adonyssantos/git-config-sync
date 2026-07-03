@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# git-config-sync — keep your git & shell config in sync across machines
+# using a Git repository and symbolic links.
+#
+#   git-config-sync init <repo-url> [dir]   Clone your config repo and remember it
+#   git-config-sync use  <dir>              Point at an existing local clone
+#   git-config-sync link                    Symlink tracked files into $HOME
+#   git-config-sync unlink                  Remove the symlinks / alias block
+#   git-config-sync push [message]          Commit all changes and push
+#   git-config-sync pull                    Pull latest, then re-link
+#   git-config-sync status                  Show the config repo's git status
+#   git-config-sync where                   Print the resolved config repo path
+#   git-config-sync help                    Show this help
+#
+# The active config repo is resolved in this order:
+#   1. $GIT_CONFIG_SYNC_DIR
+#   2. the path saved by `init`/`use` (in $XDG_CONFIG_HOME/git-config-sync/state)
+#   3. the repository this script lives in (if it contains a sync.map)
+# ─────────────────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+readonly PROG="git-config-sync"
+readonly STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/git-config-sync"
+readonly STATE_FILE="$STATE_DIR/state"
+readonly ALIAS_BEGIN="# BEGIN git-config-sync aliases"
+readonly ALIAS_END="# END git-config-sync aliases"
+
+# ── helpers ─────────────────────────────────────────────────────────────────
+info()  { printf '\033[0;34m==>\033[0m %s\n' "$*"; }
+ok()    { printf '\033[0;32m  ✓\033[0m %s\n' "$*"; }
+warn()  { printf '\033[0;33m  !\033[0m %s\n' "$*" >&2; }
+die()   { printf '\033[0;31mError:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# Absolute path to the directory this script resides in.
+script_dir() {
+    local src="${BASH_SOURCE[0]}"
+    while [ -h "$src" ]; do
+        local dir; dir="$(cd -P "$(dirname "$src")" && pwd)"
+        src="$(readlink "$src")"
+        [[ "$src" != /* ]] && src="$dir/$src"
+    done
+    cd -P "$(dirname "$src")" && pwd
+}
+
+save_repo_dir() {
+    mkdir -p "$STATE_DIR"
+    printf 'REPO_DIR=%q\n' "$1" > "$STATE_FILE"
+}
+
+# Resolve the active config repo directory.
+resolve_repo_dir() {
+    if [ -n "${GIT_CONFIG_SYNC_DIR:-}" ]; then
+        printf '%s\n' "$GIT_CONFIG_SYNC_DIR"; return 0
+    fi
+    if [ -f "$STATE_FILE" ]; then
+        # shellcheck disable=SC1090
+        local REPO_DIR=""; source "$STATE_FILE"
+        [ -n "$REPO_DIR" ] && { printf '%s\n' "$REPO_DIR"; return 0; }
+    fi
+    local self_repo; self_repo="$(dirname "$(script_dir)")"   # bin/ -> repo root
+    if [ -f "$self_repo/sync.map" ]; then
+        printf '%s\n' "$self_repo"; return 0
+    fi
+    return 1
+}
+
+require_repo_dir() {
+    local dir
+    dir="$(resolve_repo_dir)" || die "No config repo set. Run '$PROG init <repo-url>' or '$PROG use <dir>' first."
+    [ -d "$dir" ] || die "Config repo path does not exist: $dir"
+    printf '%s\n' "$dir"
+}
+
+# Iterate the manifest, calling the given function with (src_abs, target_abs).
+each_mapping() {
+    local repo="$1" fn="$2" map="$1/sync.map"
+    [ -f "$map" ] || die "Manifest not found: $map"
+    local src target
+    while read -r src target; do
+        [ -z "$src" ] && continue
+        case "$src" in \#*) continue;; esac
+        "$fn" "$repo/$src" "$HOME/$target" "$target"
+    done < "$map"
+}
+
+# ── commands ────────────────────────────────────────────────────────────────
+cmd_init() {
+    local url="${1:-}" dir="${2:-$HOME/DEVELOPMENT/dotfiles}"
+    [ -n "$url" ] || die "Usage: $PROG init <repo-url> [dir]"
+    if [ -d "$dir/.git" ]; then
+        info "Repo already cloned at $dir"
+    else
+        info "Cloning $url into $dir"
+        mkdir -p "$(dirname "$dir")"
+        git clone "$url" "$dir"
+    fi
+    save_repo_dir "$dir"
+    ok "Config repo set to $dir"
+    info "Next: run '$PROG link' to symlink your config into \$HOME"
+}
+
+cmd_use() {
+    local dir="${1:-}"
+    [ -n "$dir" ] || die "Usage: $PROG use <dir>"
+    dir="$(cd "$dir" 2>/dev/null && pwd)" || die "Directory not found: ${1}"
+    [ -d "$dir/.git" ] || warn "$dir is not a git repository (push/pull will not work)"
+    save_repo_dir "$dir"
+    ok "Config repo set to $dir"
+}
+
+_link_one() {
+    local src="$1" target="$2" rel="$3"
+    [ -e "$src" ] || { warn "skip $rel (source missing: $src)"; return; }
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$src" ]; then
+        ok "$rel already linked"; return
+    fi
+    if [ -e "$target" ] || [ -L "$target" ]; then
+        mv "$target" "$target.bak"
+        warn "backed up existing $rel -> $rel.bak"
+    fi
+    mkdir -p "$(dirname "$target")"
+    ln -s "$src" "$target"
+    ok "linked ~/$rel -> $src"
+}
+
+append_aliases() {
+    local repo="$1" aliases="$repo/config/bashrc.aliases" rc="$HOME/.bashrc"
+    [ -f "$aliases" ] || return 0
+    if grep -qF "$ALIAS_BEGIN" "$rc" 2>/dev/null; then
+        ok "shell aliases already present in ~/.bashrc"
+        return 0
+    fi
+    {
+        printf '\n%s\n' "$ALIAS_BEGIN"
+        cat "$aliases"
+        printf '%s\n' "$ALIAS_END"
+    } >> "$rc"
+    ok "appended shell aliases to ~/.bashrc (run 'source ~/.bashrc' to load)"
+}
+
+cmd_link() {
+    local repo; repo="$(require_repo_dir)"
+    info "Linking config from $repo"
+    each_mapping "$repo" _link_one
+    append_aliases "$repo"
+}
+
+_unlink_one() {
+    local src="$1" target="$2" rel="$3"
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$src" ]; then
+        rm "$target"
+        ok "removed symlink ~/$rel"
+        if [ -e "$target.bak" ]; then
+            mv "$target.bak" "$target"
+            ok "restored ~/$rel from backup"
+        fi
+    fi
+}
+
+remove_aliases() {
+    local rc="$HOME/.bashrc"
+    grep -qF "$ALIAS_BEGIN" "$rc" 2>/dev/null || return 0
+    # Delete the marked block (portable sed in-place via temp file).
+    sed "/^${ALIAS_BEGIN}$/,/^${ALIAS_END}$/d" "$rc" > "$rc.tmp" && mv "$rc.tmp" "$rc"
+    ok "removed shell aliases from ~/.bashrc"
+}
+
+cmd_unlink() {
+    local repo; repo="$(require_repo_dir)"
+    info "Removing links created from $repo"
+    each_mapping "$repo" _unlink_one
+    remove_aliases
+}
+
+cmd_push() {
+    local repo; repo="$(require_repo_dir)"
+    local msg="${1:-Update config ($(hostname))}"
+    ( cd "$repo"
+      git add -A
+      if git diff --cached --quiet; then
+          info "Nothing to commit — working tree clean"
+      else
+          git commit -m "$msg"
+      fi
+      info "Pushing to remote"
+      git push )
+    ok "Pushed"
+}
+
+cmd_pull() {
+    local repo; repo="$(require_repo_dir)"
+    ( cd "$repo" && git pull --ff-only )
+    ok "Pulled latest"
+    cmd_link
+}
+
+cmd_status() {
+    local repo; repo="$(require_repo_dir)"
+    ( cd "$repo" && git status )
+}
+
+cmd_where() { require_repo_dir; }
+
+cmd_help() {
+    cat <<EOF
+$PROG — keep your git & shell config in sync across machines
+using a Git repository and symbolic links.
+
+Usage:
+  $PROG init <repo-url> [dir]   Clone your config repo and remember it
+  $PROG use  <dir>              Point at an existing local clone
+  $PROG link                    Symlink tracked files into \$HOME
+  $PROG unlink                  Remove the symlinks / alias block
+  $PROG push [message]          Commit all changes and push
+  $PROG pull                    Pull latest, then re-link
+  $PROG status                  Show the config repo's git status
+  $PROG where                   Print the resolved config repo path
+  $PROG help                    Show this help
+
+The active config repo is resolved in this order:
+  1. \$GIT_CONFIG_SYNC_DIR
+  2. the path saved by init/use ($STATE_FILE)
+  3. the repository this script lives in (if it contains a sync.map)
+EOF
+}
+
+# ── dispatch ────────────────────────────────────────────────────────────────
+main() {
+    local cmd="${1:-help}"; shift || true
+    case "$cmd" in
+        init)             cmd_init "$@";;
+        use)              cmd_use "$@";;
+        link)             cmd_link "$@";;
+        unlink)           cmd_unlink "$@";;
+        push)             cmd_push "$@";;
+        pull)             cmd_pull "$@";;
+        status)           cmd_status "$@";;
+        where)            cmd_where "$@";;
+        help|-h|--help)   cmd_help;;
+        *) die "Unknown command '$cmd'. Run '$PROG help'.";;
+    esac
+}
+
+main "$@"
