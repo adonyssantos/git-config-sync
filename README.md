@@ -215,7 +215,7 @@ edits.
 `scripts/secure-packages.sh` writes an `~/.npmrc` with:
 
 - `save-exact = true` — pin exact versions, no `^`/`~` ranges
-- `min-release-age = 7d` — refuse packages published in the last 7 days
+- `min-release-age = 7` — refuse packages published in the last 7 days (value is a plain number of days)
 - `ignore-scripts = true` — don't run install lifecycle scripts
 
 Together these shrink the window and blast radius of npm supply-chain attacks.

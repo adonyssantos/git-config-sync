@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Hardens npm package installation defaults:
 #   save-exact      – pins exact versions (no ^/~ ranges)
-#   min-release-age – waits 7 days before allowing a newly published package
+#   min-release-age – waits N days before allowing a newly published package
+#                     (npm expects a plain number of days, not a "7d" string)
 #   ignore-scripts  – prevents malicious postinstall scripts from running
 #
 # These defaults reduce the blast radius of supply-chain attacks. `ignore-scripts`
@@ -13,7 +14,7 @@ set -euo pipefail
 mkdir -p "$HOME/.config/npm"
 cat > "$HOME/.config/npm/.npmrc" << 'EOF'
 save-exact = true
-min-release-age = 7d
+min-release-age = 7
 ignore-scripts = true
 EOF
 
