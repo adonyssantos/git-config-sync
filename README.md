@@ -1,4 +1,4 @@
-# git-config-sync
+# dotsync
 
 Keep your **git and shell configuration in sync across every machine** using a
 Git repository and symbolic links.
