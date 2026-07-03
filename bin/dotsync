@@ -1,31 +1,32 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# git-config-sync — keep your git & shell config in sync across machines
+# dotsync — keep your git & shell config in sync across machines
 # using a Git repository and symbolic links.
 #
-#   git-config-sync init <repo-url> [dir]   Clone your config repo and remember it
-#   git-config-sync use  <dir>              Point at an existing local clone
-#   git-config-sync link                    Symlink tracked files into $HOME
-#   git-config-sync unlink                  Remove the symlinks / alias block
-#   git-config-sync push [message]          Commit all changes and push
-#   git-config-sync pull                    Pull latest, then re-link
-#   git-config-sync status                  Show the config repo's git status
-#   git-config-sync where                   Print the resolved config repo path
-#   git-config-sync help                    Show this help
+#   dotsync init <repo-url> [dir]   Clone your config repo and remember it
+#   dotsync use  <dir>              Point at an existing local clone
+#   dotsync link                    Symlink tracked files into $HOME
+#   dotsync unlink                  Remove the symlinks / alias block
+#   dotsync push [message]          Commit all changes and push
+#   dotsync pull                    Pull latest, then re-link
+#   dotsync status                  Show the config repo's git status
+#   dotsync doctor                  Diagnose your setup (git, PATH, auth, links)
+#   dotsync where                   Print the resolved config repo path
+#   dotsync help                    Show this help
 #
 # The active config repo is resolved in this order:
-#   1. $GIT_CONFIG_SYNC_DIR
-#   2. the path saved by `init`/`use` (in $XDG_CONFIG_HOME/git-config-sync/state)
+#   1. $DOTSYNC_DIR
+#   2. the path saved by `init`/`use` (in $XDG_CONFIG_HOME/dotsync/state)
 #   3. the repository this script lives in (if it contains a sync.map)
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
-readonly PROG="git-config-sync"
-readonly STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/git-config-sync"
+readonly PROG="dotsync"
+readonly STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/dotsync"
 readonly STATE_FILE="$STATE_DIR/state"
-readonly ALIAS_BEGIN="# BEGIN git-config-sync aliases"
-readonly ALIAS_END="# END git-config-sync aliases"
+readonly ALIAS_BEGIN="# BEGIN dotsync aliases"
+readonly ALIAS_END="# END dotsync aliases"
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 info()  { printf '\033[0;34m==>\033[0m %s\n' "$*"; }
@@ -51,8 +52,8 @@ save_repo_dir() {
 
 # Resolve the active config repo directory.
 resolve_repo_dir() {
-    if [ -n "${GIT_CONFIG_SYNC_DIR:-}" ]; then
-        printf '%s\n' "$GIT_CONFIG_SYNC_DIR"; return 0
+    if [ -n "${DOTSYNC_DIR:-}" ]; then
+        printf '%s\n' "$DOTSYNC_DIR"; return 0
     fi
     if [ -f "$STATE_FILE" ]; then
         # shellcheck disable=SC1090
@@ -203,6 +204,87 @@ cmd_status() {
 
 cmd_where() { require_repo_dir; }
 
+# Print a check line: pass (✓), warn (!), or fail (✗) plus a message.
+_check() {
+    case "$1" in
+        pass) ok "$2";;
+        warn) warn "$2";;
+        fail) printf '\033[0;31m  ✗\033[0m %s\n' "$2" >&2;;
+    esac
+}
+
+cmd_doctor() {
+    local problems=0
+
+    info "Checking your dotsync setup"
+
+    # git present (critical)
+    if command -v git >/dev/null 2>&1; then
+        _check pass "git is installed ($(git --version | awk '{print $3}'))"
+    else
+        _check fail "git is not installed — install it first"
+        problems=$((problems + 1))
+    fi
+
+    # dotsync on PATH
+    if command -v "$PROG" >/dev/null 2>&1; then
+        _check pass "$PROG is on your PATH ($(command -v "$PROG"))"
+    else
+        _check warn "$PROG is not on your PATH — add ~/.local/bin to PATH"
+    fi
+
+    # config repo resolved
+    local repo=""
+    if repo="$(resolve_repo_dir 2>/dev/null)" && [ -d "$repo" ]; then
+        _check pass "config repo: $repo"
+    else
+        _check warn "no config repo set — run '$PROG init <repo-url>' or '$PROG use <dir>'"
+        info "Nothing more to check until a config repo is set."
+        [ "$problems" -eq 0 ] && return 0 || return 1
+    fi
+
+    # remote reachability / auth (read-only)
+    if git -C "$repo" remote get-url origin >/dev/null 2>&1; then
+        if git -C "$repo" ls-remote --exit-code origin >/dev/null 2>&1; then
+            _check pass "remote 'origin' is reachable and authenticated"
+        else
+            _check fail "cannot reach/authenticate 'origin' — try 'gh auth login', add an SSH key, or configure a git credential helper"
+            problems=$((problems + 1))
+        fi
+    else
+        _check warn "config repo has no 'origin' remote (push/pull will not work)"
+    fi
+
+    # manifest + link status
+    if [ -f "$repo/sync.map" ]; then
+        _check pass "manifest found: $repo/sync.map"
+        each_mapping "$repo" _doctor_one
+    else
+        _check fail "no sync.map in $repo"
+        problems=$((problems + 1))
+    fi
+
+    if [ "$problems" -eq 0 ]; then
+        info "All good."
+        return 0
+    fi
+    info "$problems problem(s) found."
+    return 1
+}
+
+_doctor_one() {
+    local src="$1" target="$2" rel="$3"
+    if [ ! -e "$src" ]; then
+        _check fail "$rel: source missing ($src)"
+    elif [ -L "$target" ] && [ "$(readlink "$target")" = "$src" ]; then
+        _check pass "$rel: linked"
+    elif [ -e "$target" ] || [ -L "$target" ]; then
+        _check warn "$rel: exists but not linked to the repo (run '$PROG link')"
+    else
+        _check warn "$rel: not linked yet (run '$PROG link')"
+    fi
+}
+
 cmd_help() {
     cat <<EOF
 $PROG — keep your git & shell config in sync across machines
@@ -216,11 +298,12 @@ Usage:
   $PROG push [message]          Commit all changes and push
   $PROG pull                    Pull latest, then re-link
   $PROG status                  Show the config repo's git status
+  $PROG doctor                  Diagnose your setup (git, PATH, auth, links)
   $PROG where                   Print the resolved config repo path
   $PROG help                    Show this help
 
 The active config repo is resolved in this order:
-  1. \$GIT_CONFIG_SYNC_DIR
+  1. \$DOTSYNC_DIR
   2. the path saved by init/use ($STATE_FILE)
   3. the repository this script lives in (if it contains a sync.map)
 EOF
@@ -237,6 +320,7 @@ main() {
         push)             cmd_push "$@";;
         pull)             cmd_pull "$@";;
         status)           cmd_status "$@";;
+        doctor)           cmd_doctor "$@";;
         where)            cmd_where "$@";;
         help|-h|--help)   cmd_help;;
         *) die "Unknown command '$cmd'. Run '$PROG help'.";;

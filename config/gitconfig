@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# git-config-sync — sample global git config
+# dotsync — sample global git config
 #
-# This file is symlinked to ~/.gitconfig by `git-config-sync link` (or install.sh).
+# This file is symlinked to ~/.gitconfig by `dotsync link` (or install.sh).
 # Replace the placeholders in the [user]/[github] sections with your own values,
 # or set them once with:
 #

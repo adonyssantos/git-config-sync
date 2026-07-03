@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# git-config-sync — shell aliases
+# dotsync — shell aliases
 #
-# This block is appended to your ~/.bashrc by `git-config-sync link` (or
+# This block is appended to your ~/.bashrc by `dotsync link` (or
 # install.sh). It is wrapped in BEGIN/END markers so it can be safely
 # re-applied and later removed without touching the rest of your ~/.bashrc.
 # ─────────────────────────────────────────────────────────────────────────────

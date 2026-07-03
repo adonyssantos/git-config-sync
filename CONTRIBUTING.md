@@ -1,6 +1,6 @@
-# Contributing to git-config-sync
+# Contributing to dotsync
 
-Thanks for your interest in improving `git-config-sync`! This project is a small,
+Thanks for your interest in improving `dotsync`! This project is a small,
 dependency-free bash tool plus a dotfiles template, so contributions are easy to
 make and easy to review. This guide explains how.
 
@@ -31,22 +31,23 @@ make and easy to review. This guide explains how.
 ## Development setup
 
 ```bash
-git clone https://github.com/<your-fork>/git-config-sync.git
-cd git-config-sync
+git clone https://github.com/<your-fork>/dotsync.git
+cd dotsync
 ```
 
 There's nothing to build. Run the CLI directly:
 
 ```bash
-bash bin/git-config-sync help
+bash bin/dotsync help
 ```
 
 **Always test against a throwaway `$HOME`** so you never touch your real dotfiles:
 
 ```bash
 TMP="$(mktemp -d)"
-HOME="$TMP" GIT_CONFIG_SYNC_DIR="$PWD" bash bin/git-config-sync link
-HOME="$TMP" GIT_CONFIG_SYNC_DIR="$PWD" bash bin/git-config-sync unlink
+HOME="$TMP" DOTSYNC_DIR="$PWD" bash bin/dotsync link
+HOME="$TMP" DOTSYNC_DIR="$PWD" bash bin/dotsync doctor
+HOME="$TMP" DOTSYNC_DIR="$PWD" bash bin/dotsync unlink
 rm -rf "$TMP"
 ```
 
@@ -67,10 +68,10 @@ Make sure these pass:
 
 ```bash
 # Syntax check
-bash -n bin/git-config-sync install.sh scripts/secure-packages.sh
+bash -n bin/dotsync install.sh scripts/secure-packages.sh
 
 # Static analysis (if installed)
-shellcheck bin/git-config-sync install.sh scripts/secure-packages.sh
+shellcheck bin/dotsync install.sh scripts/secure-packages.sh
 
 # End-to-end smoke test against a throwaway HOME (see above)
 ```

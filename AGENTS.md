@@ -5,13 +5,13 @@ this repository. Humans: see [README.md](README.md).
 
 ## What this project is
 
-`git-config-sync` syncs a user's git/shell dotfiles across machines via a Git repo
+`dotsync` syncs a user's git/shell dotfiles across machines via a Git repo
 and symbolic links. It ships:
 
-- `bin/git-config-sync` — a dependency-free bash CLI (the core logic).
+- `bin/dotsync` — a dependency-free bash CLI (the core logic).
 - `config/` — the dotfiles that get symlinked into `$HOME`.
 - `sync.map` — the manifest mapping `config/*` files to `$HOME` targets.
-- `install.sh` — a one-shot installer that wires everything up.
+- `install.sh` — an installer (works via `curl | bash` or from a local clone).
 - `scripts/secure-packages.sh` — optional npm hardening.
 
 ## Golden rules
@@ -43,13 +43,14 @@ and symbolic links. It ships:
 Run these checks and make sure they pass:
 
 ```bash
-bash -n bin/git-config-sync install.sh scripts/secure-packages.sh   # syntax
-shellcheck bin/git-config-sync install.sh scripts/secure-packages.sh # if available
+bash -n bin/dotsync install.sh scripts/secure-packages.sh   # syntax
+shellcheck bin/dotsync install.sh scripts/secure-packages.sh # if available
 
 # End-to-end smoke test against a throwaway HOME (never your real one):
 TMP="$(mktemp -d)"
-HOME="$TMP" GIT_CONFIG_SYNC_DIR="$PWD" bash bin/git-config-sync link
-HOME="$TMP" GIT_CONFIG_SYNC_DIR="$PWD" bash bin/git-config-sync unlink
+HOME="$TMP" DOTSYNC_DIR="$PWD" bash bin/dotsync link
+HOME="$TMP" DOTSYNC_DIR="$PWD" bash bin/dotsync doctor
+HOME="$TMP" DOTSYNC_DIR="$PWD" bash bin/dotsync unlink
 rm -rf "$TMP"
 ```
 

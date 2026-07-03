@@ -1,4 +1,4 @@
-# git-config-sync
+# dotsync
 
 Keep your **git and shell configuration in sync across every machine** using a
 Git repository and symbolic links.
@@ -14,14 +14,15 @@ The idea is simple and battle-tested:
    home.
 
 This repo is both a **ready-to-use template** you can fork and fill with your own
-config, and a small **CLI (`git-config-sync`)** that automates the clone / link /
-push / pull cycle.
+config, and a small **CLI (`dotsync`)** that automates the clone / link / push /
+pull cycle.
 
 ---
 
 ## Table of contents
 
 - [Why symlinks?](#why-symlinks)
+- [Installation](#installation)
 - [Repository layout](#repository-layout)
 - [Quick start](#quick-start)
 - [Making it your own](#making-it-your-own)
@@ -33,7 +34,9 @@ push / pull cycle.
   - [npm security defaults](#npm-security-defaults)
 - [Security notes](#security-notes)
 - [Manual usage (no CLI)](#manual-usage-no-cli)
+- [Design decisions & roadmap](#design-decisions--roadmap)
 - [Uninstall](#uninstall)
+- [Contributing](#contributing)
 - [References](#references)
 
 ---
@@ -53,12 +56,51 @@ change on its next `pull`.
 
 ---
 
+## Installation
+
+Install just the CLI, straight from the internet:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adonyssantos/dotsync/main/install.sh | bash
+```
+
+This clones `dotsync` into `~/.local/share/dotsync` and symlinks the `dotsync`
+command into `~/.local/bin`. Make sure that directory is on your `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"   # add to your ~/.bashrc / ~/.zshrc
+```
+
+<details>
+<summary><strong>Manual install</strong></summary>
+
+```bash
+git clone https://github.com/adonyssantos/dotsync.git ~/.local/share/dotsync
+ln -s ~/.local/share/dotsync/bin/dotsync ~/.local/bin/dotsync
+```
+</details>
+
+### Windows
+
+`dotsync` is a bash script. On Windows, run it under **Git Bash** (ships with
+[Git for Windows](https://gitforwindows.org/)) or **WSL** — the `curl | bash`
+line above works unchanged in either. Symlinks need Developer Mode or an elevated
+shell; Git Bash handles this transparently for files inside your home directory.
+
+After installing, verify everything with:
+
+```bash
+dotsync doctor
+```
+
+---
+
 ## Repository layout
 
 ```
-git-config-sync/
+dotsync/
 ├── bin/
-│   └── git-config-sync      # the CLI (bash, no dependencies)
+│   └── dotsync              # the CLI (bash, no dependencies)
 ├── config/
 │   ├── gitconfig            # → ~/.gitconfig
 │   ├── gitignore_global     # → ~/.gitignore_global
@@ -66,7 +108,7 @@ git-config-sync/
 ├── scripts/
 │   └── secure-packages.sh   # optional npm hardening
 ├── sync.map                 # manifest: which file links where
-├── install.sh               # one-shot installer for this template
+├── install.sh               # installer (curl-pipe or local)
 ├── AGENTS.md                # guidance for AI coding agents
 ├── CONTRIBUTING.md          # how to contribute
 └── README.md
@@ -87,22 +129,24 @@ Add your own lines to sync more files (e.g. `config/tmux.conf  .tmux.conf`).
 ## Quick start
 
 ```bash
-# 1. Clone this template (or your fork of it)
-git clone https://github.com/adonyssantos/git-config-sync.git ~/DEVELOPMENT/dotfiles
-cd ~/DEVELOPMENT/dotfiles
+# 1. Install the CLI (see Installation above)
+curl -fsSL https://raw.githubusercontent.com/adonyssantos/dotsync/main/install.sh | bash
 
-# 2. Run the installer — it installs the CLI, creates the symlinks,
-#    appends the shell aliases, and optionally hardens npm.
-bash install.sh
+# 2. Point dotsync at your dotfiles repo and link it into $HOME
+dotsync init https://github.com/<you>/<your-dotfiles>.git
+dotsync link
 
-# 3. Load the new aliases and set your identity
-source ~/.bashrc
+# 3. Set your git identity and verify
 git config --global user.name  "Your Name"
 git config --global user.email "you@example.com"
+dotsync doctor
 ```
 
-`install.sh` backs up anything it would overwrite as `<file>.bak`, so it's safe to
-run on a machine that already has a `~/.gitconfig`.
+`link` backs up anything it would overwrite as `<file>.bak`, so it's safe to run
+on a machine that already has a `~/.gitconfig`.
+
+> **Using this repo itself as your dotfiles?** Clone it and run `bash install.sh`
+> from inside the clone — it will offer to link *its* config into your `$HOME`.
 
 ---
 
@@ -115,42 +159,39 @@ run on a machine that already has a `~/.gitconfig`.
 4. Commit and push. From then on:
 
    ```bash
-   git-config-sync push "add tmux config"   # commit + push your changes
-   git-config-sync pull                      # on another machine: pull + re-link
+   dotsync push "add tmux config"   # commit + push your changes
+   dotsync pull                     # on another machine: pull + re-link
    ```
-
-On every new machine you only need:
-
-```bash
-git-config-sync init https://github.com/<you>/<your-dotfiles>.git
-git-config-sync link
-```
 
 ---
 
 ## CLI reference
 
-Once installed, `git-config-sync` is on your `PATH` (via `~/.local/bin`). It
-remembers which repository is your "config repo" in
-`~/.config/git-config-sync/state`.
+Once installed, `dotsync` is on your `PATH` (via `~/.local/bin`). It remembers
+which repository is your "config repo" in `~/.config/dotsync/state`.
 
 | Command | Description |
 |---------|-------------|
-| `git-config-sync init <repo-url> [dir]` | Clone your config repo (default dir `~/DEVELOPMENT/dotfiles`) and remember it |
-| `git-config-sync use <dir>` | Point the CLI at an existing local clone |
-| `git-config-sync link` | Create the symlinks from `sync.map` and append the shell aliases |
-| `git-config-sync unlink` | Remove the symlinks and the alias block (restores any `.bak` backups) |
-| `git-config-sync push [message]` | `git add -A`, commit, and push in the config repo |
-| `git-config-sync pull` | `git pull --ff-only`, then re-link |
-| `git-config-sync status` | Show `git status` for the config repo |
-| `git-config-sync where` | Print the resolved config repo path |
-| `git-config-sync help` | Show usage |
+| `dotsync init <repo-url> [dir]` | Clone your config repo (default dir `~/DEVELOPMENT/dotfiles`) and remember it |
+| `dotsync use <dir>` | Point the CLI at an existing local clone |
+| `dotsync link` | Create the symlinks from `sync.map` and append the shell aliases |
+| `dotsync unlink` | Remove the symlinks and the alias block (restores any `.bak` backups) |
+| `dotsync push [message]` | `git add -A`, commit, and push in the config repo |
+| `dotsync pull` | `git pull --ff-only`, then re-link |
+| `dotsync status` | Show `git status` for the config repo |
+| `dotsync doctor` | Diagnose your setup: git, PATH, remote auth, and link status |
+| `dotsync where` | Print the resolved config repo path |
+| `dotsync help` | Show usage |
 
 **How the active repo is resolved** (first match wins):
 
-1. `$GIT_CONFIG_SYNC_DIR` environment variable
+1. `$DOTSYNC_DIR` environment variable
 2. the path saved by `init` / `use`
-3. the repository the `git-config-sync` script itself lives in (if it has a `sync.map`)
+3. the repository the `dotsync` script itself lives in (if it has a `sync.map`)
+
+> **Coming from the [original issue](https://github.com/adonyssantos/dotsync/issues/4)?**
+> The proposed `set <folder> <repo>` maps to `dotsync init <repo> [dir]`, and there
+> is deliberately no `login` command — see [Design decisions](#design-decisions--roadmap).
 
 ---
 
@@ -255,11 +296,33 @@ Then commit and push from the repo as usual.
 
 ---
 
+## Design decisions & roadmap
+
+- **Auth is delegated to git — there is no `dotsync login`.** Re-implementing
+  GitHub authentication would add a security surface and duplicate what git
+  already does well. `dotsync` uses whatever credentials git is already
+  configured with (SSH keys, a credential helper, or `gh auth`). `dotsync doctor`
+  tests remote reachability and points you at the right fix when auth fails.
+- **`init` / `use` instead of `set-folder` / `set-repo`.** The original issue
+  proposed `set <folder> <repo>`; that is covered by `dotsync init <repo> [dir]`,
+  which also does the initial clone. Kept to two verbs to keep the surface small.
+- **No npm package or prebuilt binaries (for now).** The CLI is intentionally
+  dependency-free bash so it runs anywhere without a toolchain. Distribution is
+  handled by the `curl | bash` installer above; a Homebrew formula is the likely
+  next step. Prebuilt binaries would only make sense after a rewrite in a compiled
+  language, which isn't warranted yet.
+- **A public "catalog" of shared configs is out of scope.** That's a separate
+  product (a web app), not part of this CLI, and would be tracked in its own repo.
+
+---
+
 ## Uninstall
 
 ```bash
-git-config-sync unlink          # remove symlinks + alias block, restore backups
-rm ~/.local/bin/git-config-sync # remove the CLI shim
+dotsync unlink                  # remove symlinks + alias block, restore backups
+rm ~/.local/bin/dotsync         # remove the CLI shim
+rm -rf ~/.local/share/dotsync   # remove the cloned CLI (if installed via curl)
+rm -rf ~/.config/dotsync        # remove saved state
 ```
 
 ---
