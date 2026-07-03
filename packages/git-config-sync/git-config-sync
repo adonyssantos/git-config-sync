@@ -1,0 +1,134 @@
+#!/bin/bash
+
+# Function to display usage information
+usage() {
+    echo "Usage: git-config-sync [options]"
+    echo "Options:"
+    echo "  set <folder_path> <repo_url>        Set local folder path and remote repository"
+    echo "  push                                Push local configuration to your remote repository"
+    echo "  pull                                Pull configuration from your remote repository"
+    echo "  config                              Sync git config"
+    exit 1
+}
+
+
+# Function to sync git config
+# sync_git_config() {
+#     echo "Syncing git config..."
+#     # Check if .gitconfig exists in the local repository
+#     if [ -f .gitconfig ]; then
+#         # Unix/Linux command
+#         ln -sf "$folder_path/git-config/.gitconfig" .gitconfig
+#         echo "Git config synced successfully!"
+#     else
+#         echo "Error: .gitconfig file not found in the local repository."
+#     fi
+# }
+
+detect_os_and_set_folder_path() {
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        echo "Linux OS detected"
+        GIT_CONFIG_SYNC_FOLDER_PATH="$HOME/.config/git-config-sync"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # Mac OSX
+        echo "Mac OSX detected"
+        GIT_CONFIG_SYNC_FOLDER_PATH="$HOME/.config/git-config-sync"
+    elif [[ "$OSTYPE" == "cygwin" ]]; then
+        # POSIX compatibility layer and Linux environment emulation for Windows
+        echo "Windows OS detected"
+        GIT_CONFIG_SYNC_FOLDER_PATH="$HOME/.config/git-config-sync"
+    elif [[ "$OSTYPE" == "msys" ]]; then
+        # Lightweight shell and GNU utilities compiled for Windows (part of MinGW)
+        echo "Windows OS detected"
+        GIT_CONFIG_SYNC_FOLDER_PATH="$HOME/.config/git-config-sync"
+    elif [[ "$OSTYPE" == "win32" ]]; then
+        # I'm not sure this can happen.
+        echo "Windows OS detected"
+        GIT_CONFIG_SYNC_FOLDER_PATH="$HOME/.config/git-config-sync"
+    elif [[ "$OSTYPE" == "freebsd"* ]]; then
+        echo "FreeBSD OS detected"
+        GIT_CONFIG_SYNC_FOLDER_PATH="$HOME/.config/git-config-sync"
+    else
+        echo "Unknown OS detected"
+        GIT_CONFIG_SYNC_FOLDER_PATH="$HOME/.config/git-config-sync"
+    fi
+}
+
+# Function to set local folder path and remote repository
+set_config() {
+    config_path=$1
+    echo "Setting local folder path to: $config_path"
+    export GIT_CONFIG_SYNC_CONFIG_PATH=$config_path
+
+    repo_url=$2
+    echo "Setting repository to: $repo_url"
+    export GIT_CONFIG_SYNC_REPO_URL=$repo_url
+
+    detect_os_and_set_folder_path()
+
+    echo "Checking if the local folder exists..."
+    if [ -d $GIT_CONFIG_SYNC_FOLDER_PATH ]; then
+        echo "Local folder already exists."
+    else
+        echo "Local folder doesn't exist. Cloning the repository..."
+        try {
+            mkdir -p $GIT_CONFIG_SYNC_FOLDER_PATH
+            git clone $repo_url $GIT_CONFIG_SYNC_FOLDER_PATH
+            echo "Repository cloned successfully!"
+        } catch (Exception e) {
+            echo "An error occurred while cloning the repository."
+            echo "Error message: $e"
+        }
+    fi
+
+    # link the foler config with the repo
+    ln -sf "$GIT_CONFIG_SYNC_CONFIG_PATH" "$GIT_CONFIG_SYNC_FOLDER_PATH"
+    echo "Local folder path and remote repository set successfully!"
+}
+
+# Function to push local configuration to your repo
+push_config() {
+    echo "Pushing local configuration to your repo..."
+    try {
+        cd $GIT_CONFIG_SYNC_FOLDER_PATH
+        git add .
+        git commit -m "Configuration updated on $(date)" -m "This commit was done automatically by git-config-sync"
+        git push
+        echo "Local configuration pushed to your repo successfully!"
+    } catch (Exception e) {
+        echo "An error occurred while pushing the local configuration to your repo."
+        echo "Error message: $e"
+    }
+}
+
+# Function to pull configuration from your repo
+pull_config() {
+    echo "Pulling configuration from your remote repo..."
+    try {
+        cd $GIT_CONFIG_SYNC_FOLDER_PATH
+        git pull
+        echo "Configuration pulled from your repo successfully!"
+    } catch (Exception e) {
+        echo "An error occurred while pulling the configuration from your remote repo."
+        echo "Error message: $e"
+    }
+}
+
+# Main script logic
+case "$1" in
+    "set")
+        set_config "$2" "$3"
+        ;;
+    "push")
+        push_config
+        ;;
+    "pull")
+        pull_config
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+exit
