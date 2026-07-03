@@ -1,7 +1,7 @@
-# git-config-sync manifest
+# dotsync manifest
 #
 # Each non-comment line maps a file tracked in this repository to a destination
-# under your $HOME. `git-config-sync link` creates a symlink at the destination
+# under your $HOME. `dotsync link` creates a symlink at the destination
 # pointing back at the repo file, so edits stay in sync in both directions.
 #
 # Format:  <source (relative to repo root)>   <target (relative to $HOME)>
